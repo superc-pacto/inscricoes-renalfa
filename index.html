@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inscrições — 2º Dia RENALFA 2026</title>
+<style>
+*{box-sizing:border-box}body{margin:0;padding:20px 12px;background:#f3f6f4;color:#24332b;font-family:Arial,Helvetica,sans-serif}
+.container{max-width:760px;margin:auto}header{background:#176b45;color:#fff;text-align:center;padding:25px 16px;border-radius:14px 14px 0 0}
+header h1{margin:0 0 10px;font-size:24px}header p{margin:0;line-height:1.5}main{background:#fff;padding:24px;border-radius:0 0 14px 14px;box-shadow:0 5px 20px #0000000d}
+.aviso{padding:14px;background:#edf7f0;border-left:4px solid #238451;border-radius:5px;font-size:14px;line-height:1.5}
+h2{color:#176b45;font-size:19px;border-bottom:2px solid #e2eee6;padding-bottom:9px;margin-top:26px}.campo{margin-bottom:18px}
+label{display:block;margin-bottom:7px;font-weight:bold;font-size:14px}input,select{width:100%;min-height:46px;padding:11px;border:1px solid #cbd5ce;border-radius:7px;background:#fff;color:#24332b;font-size:15px}
+input:focus,select:focus{outline:2px solid #a7d7b8;border-color:#238451}.resumo{margin-top:7px;color:#176b45;font-size:13px}
+button{width:100%;margin-top:24px;padding:15px;border:0;border-radius:8px;background:#176b45;color:#fff;font-size:16px;font-weight:bold;cursor:pointer}button:disabled{opacity:.6;cursor:not-allowed}
+.mensagem{display:none;margin-top:18px;padding:14px;border-radius:8px;line-height:1.5;overflow-wrap:anywhere}.sucesso{display:block;background:#e9f7ed;border:1px solid #9dd5ad;color:#155b2f}.erro{display:block;background:#fff0ef;border:1px solid #efb4af;color:#9f2118}
+.rodape{margin-top:22px;color:#6b756e;text-align:center;font-size:12px;line-height:1.5}@media(max-width:480px){main{padding:17px 13px}header h1{font-size:21px}}
+</style>
+</head>
+<body><div class="container">
+<header><h1>Inscrições — 2º Dia</h1><p>3º Ciclo Formativo Estadual RENALFA — 2026</p></header>
+<main>
+<div class="aviso"><strong>Atenção!</strong> Preencha seus dados e escolha uma oficina pela manhã e outra diferente à tarde. As vagas são limitadas.</div>
+<form id="formulario">
+<h2>Dados pessoais</h2>
+<div class="campo"><label for="nome">Nome completo *</label><input id="nome" name="nome" autocomplete="name" required placeholder="Digite seu nome completo"></div>
+<div class="campo"><label for="cpf">CPF *</label><input id="cpf" name="cpf" inputmode="numeric" maxlength="14" autocomplete="off" required placeholder="000.000.000-00"><small>Digite os 11 números do CPF.</small></div>
+<div class="campo"><label for="funcao">Função *</label><select id="funcao" name="funcao" required><option value="">Selecione sua função</option>
+<option>Articulador (a) Municipal RENALFA</option><option>Articulador (a) Regional de Gestão RENALFA CONSED</option><option>Articulador (a) Regional de Formação RENALFA CONSED</option><option>Articulador (a) Regional de Gestão RENALFA UNDIME</option><option>Articulador(a) Estadual</option></select></div>
+<h2>Oficina — manhã</h2><div class="campo"><label for="manha">Escolha uma oficina *</label><select id="manha" required disabled><option>Carregando oficinas...</option></select><div id="resumoManha" class="resumo"></div></div>
+<h2>Oficina — tarde</h2><div class="campo"><label for="tarde">Escolha uma oficina diferente *</label><select id="tarde" required disabled><option>Carregando oficinas...</option></select><div id="resumoTarde" class="resumo"></div></div>
+<button id="enviar" type="submit" disabled>Confirmar inscrição</button><div id="mensagem" class="mensagem" role="status" aria-live="polite"></div>
+</form><div class="rodape">RENALFA 2026 — Sistema de inscrição nas oficinas formativas.</div>
+</main></div>
+<script>
+const $=id=>document.getElementById(id);let disponibilidade=null,enviando=false;
+$('cpf').addEventListener('input',function(){let n=this.value.replace(/\D/g,'').slice(0,11),v=n;if(n.length>9)v=n.replace(/^(\d{3})(\d{3})(\d{3})(\d{1,2})$/,'$1.$2.$3-$4');else if(n.length>6)v=n.replace(/^(\d{3})(\d{3})(\d{1,3})$/,'$1.$2.$3');else if(n.length>3)v=n.replace(/^(\d{3})(\d{1,3})$/,'$1.$2');this.value=v});
+function msg(t,c){$('mensagem').textContent=t;$('mensagem').className='mensagem '+c}function clearMsg(){$('mensagem').textContent='';$('mensagem').className='mensagem'}
+async function api(action,data={}){const r=await fetch('/.netlify/functions/api',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...data})});const j=await r.json();if(!r.ok||!j.sucesso&&j.erro)throw new Error(j.erro||'Não foi possível concluir a solicitação.');return j}
+function fill(id,list){const s=$(id);s.innerHTML='';let first=document.createElement('option');first.value='';first.textContent='Selecione uma oficina';s.appendChild(first);list.forEach(x=>{let o=document.createElement('option');o.value=x.id;o.disabled=x.disponiveis<=0;o.textContent=(o.disabled?'ESGOTADA — ':'')+'Sala '+x.sala+' | Grupo '+x.grupo+' — '+x.oficina+(o.disabled?'':' ('+x.disponiveis+' vagas disponíveis)');s.appendChild(o)});s.disabled=false}
+function refreshSummary(turn){if(!disponibilidade)return;let id=turn==='manha'?'manha':'tarde',list=turn==='manha'?disponibilidade.manha:disponibilidade.tarde,item=list.find(x=>x.id===$(id).value);$('resumo'+(turn==='manha'?'Manha':'Tarde')).textContent=item?'Sala '+item.sala+' • Grupo '+item.grupo+' • '+item.disponiveis+' vaga(s) disponível(is)':'';validate()}
+function validate(){if(!disponibilidade){$('enviar').disabled=true;return}let a=disponibilidade.manha.find(x=>x.id===$('manha').value),b=disponibilidade.tarde.find(x=>x.id===$('tarde').value),same=a&&b&&a.oficina===b.oficina;$('enviar').disabled=enviando||!a||!b||a.disponiveis<=0||b.disponiveis<=0||same;if(same)msg('Escolha oficinas diferentes para manhã e tarde.','erro')}
+async function load(){try{let d=await api('disponibilidade');disponibilidade=d;fill('manha',d.manha);fill('tarde',d.tarde);refreshSummary('manha');refreshSummary('tarde');validate()}catch(e){msg('Não foi possível carregar as oficinas: '+e.message,'erro')}}
+$('manha').addEventListener('change',()=>{clearMsg();refreshSummary('manha')});$('tarde').addEventListener('change',()=>{clearMsg();refreshSummary('tarde')});
+$('formulario').addEventListener('submit',async e=>{e.preventDefault();if(enviando)return;clearMsg();const cpf=$('cpf').value.replace(/\D/g,'');if(cpf.length!==11){msg('O CPF precisa ter exatamente 11 números. Confira o campo e tente novamente.','erro');$('cpf').focus();return}if(!disponibilidade){msg('Aguarde o carregamento das oficinas.','erro');return}
+enviando=true;$('enviar').disabled=true;$('enviar').textContent='Confirmando inscrição...';
+try{const r=await api('inscrever',{form:{nome:$('nome').value.trim(),cpf,funcao:$('funcao').value,manha:$('manha').value,tarde:$('tarde').value}});if(!r.sucesso)throw new Error(r.erro||'Não foi possível confirmar.');$('formulario').reset();msg('Inscrição confirmada com sucesso, '+r.nome+'! Suas duas oficinas foram reservadas.','sucesso');await load()}catch(err){msg(err.message||'Erro ao registrar a inscrição.','erro');await load()}finally{enviando=false;$('enviar').textContent='Confirmar inscrição';validate()}
+});
+load();
+</script></body></html>
